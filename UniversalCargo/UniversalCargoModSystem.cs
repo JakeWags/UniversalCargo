@@ -25,16 +25,22 @@ namespace UniversalCargo
         private IClientNetworkChannel clientChannel;
         private IServerNetworkChannel serverChannel;
 
-        // --- WHITELIST / BLACKLIST ---
         private readonly List<string> Whitelist = new List<string>
         {
             "*:crate-*",
-            "*:*crate*"
+            "*:*crate*",
+            "*:basket-*",
+            "*:storagevessel-*",
+            "*:vessel-*",
+            "*:labeledchest-*",
+            "*:chest-*-labeled-*"
         };
 
         private readonly List<string> Blacklist = new List<string>
         {
-            // Empty for now
+            "*:*chest*",
+            "*:*trunk*",
+            "*:*treasure*",
         };
 
         public override void Start(ICoreAPI api)
@@ -64,6 +70,8 @@ namespace UniversalCargo
         private void OnClientInput(EnumEntityAction action, bool on, ref EnumHandling handled)
         {
             if (action != EnumEntityAction.RightMouseDown || !on) return;
+            if (!clientApi.Input.MouseGrabbed) return;
+
             if (!clientApi.Input.KeyboardKeyState[(int)GlKeys.ShiftLeft] &&
                 !clientApi.Input.KeyboardKeyState[(int)GlKeys.ShiftRight]) return;
 
@@ -114,35 +122,42 @@ namespace UniversalCargo
 
         private void SealContainer(IWorldAccessor world, BlockPos pos, BlockEntity oldBe, IServerPlayer player, ItemSlot packingSlot)
         {
-            //  Extract ONLY the inventory data
-            TreeAttribute inventoryData = new TreeAttribute();
+            TreeAttribute fullBeData = new TreeAttribute();
+            oldBe.ToTreeAttributes(fullBeData);
 
-            if (oldBe is IBlockEntityContainer container && container.Inventory != null)
-            {
-                if (container.Inventory is InventoryBase invBase)
-                {
-                    invBase.ToTreeAttributes(inventoryData);
-                }
-            }
+            string crateType = fullBeData.GetString("type", "aged");
 
-            string originalBlockCode = world.BlockAccessor.GetBlock(pos).Code.ToString();
+            Block originalBlock = world.BlockAccessor.GetBlock(pos);
+            string originalBlockCode = originalBlock.Code.ToString();
 
-            // Create the Sealed Crate
+            world.Logger.Event($"[UniversalCargo] Sealing: Code='{originalBlockCode}', Type='{crateType}'");
+            (world.Api as ICoreServerAPI)?.SendMessage(player, 0, $"Sealed: {crateType} crate", EnumChatType.Notification);
+
             Block sealedBlock = world.GetBlock(new AssetLocation("universalcargo:sealedcrate"));
-            if (sealedBlock == null) return;
+            if (sealedBlock == null)
+            {
+                world.Logger.Error("[UniversalCargo] Could not find sealedcrate block!");
+                return;
+            }
 
             world.BlockAccessor.SetBlock(sealedBlock.BlockId, pos);
 
             BlockEntitySealedCrate newBe = world.BlockAccessor.GetBlockEntity(pos) as BlockEntitySealedCrate;
             if (newBe != null)
             {
-                // Use 'SavedInventoryData' to match BlockEntity class
-                newBe.SavedInventoryData = inventoryData;
+                newBe.SavedInventoryData = fullBeData;
                 newBe.OriginalBlockCode = originalBlockCode;
+                newBe.CrateType = crateType;
                 newBe.MarkDirty(true);
+
+                world.Logger.Event($"[UniversalCargo] Saved: Type={newBe.CrateType}");
+            }
+            else
+            {
+                world.Logger.Error("[UniversalCargo] Failed to get sealed crate block entity!");
             }
 
-            world.PlaySoundAt(new AssetLocation("game:sounds/player/build/chest"), pos.X, pos.Y, pos.Z, null);
+            world.PlaySoundAt(new AssetLocation("game:sounds/block/planks"), pos.X, pos.Y, pos.Z, null);
 
             packingSlot.TakeOut(1);
             packingSlot.MarkDirty();

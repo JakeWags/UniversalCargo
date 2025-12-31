@@ -2,22 +2,35 @@
   "code": "sealedcrate",
   "class": "BlockSealedCrate",
   "entityClass": "BlockEntitySealedCrate",
-  "attributes": {
-    "handbook": { "groupBy": ["sealedcrate"] }
-  },
-  "blockmaterial": "Wood",
-  "resistance": 1.5,
-  "requiredMiningTier": 0,
-  "shape": { "base": "game:block/crate/normal-lid" },
-  "textures": {
-    "all": { "base": "game:block/crate/pine-north" } 
+  "shape": { "base": "game:block/wood/crate/normal-lid" },
+  "textures": { 
+    "all": { "base": "game:block/wood/crate/pine" } 
   },
   "maxstacksize": 1,
-  "creativeinventory": { "general": ["*"], "blocks": ["*"] },
+  "sidesolid": {
+    "all": false
+  },
+  "sideopaque": {
+    "all": false
+  },
+  "blockmaterial": "Wood",
+  "resistance": 3,
   "sounds": {
     "place": "game:block/planks",
-    "break": "game:block/planks",
     "hit": "game:block/planks",
+    "break": "game:block/planks",
     "walk": "game:walk/wood"
+  },
+  "creativeinventory": { 
+    "general": ["*"], 
+    "decorative": ["*"] 
+  },
+  "collisionbox": { 
+    "x1": 0.0625, "y1": 0, "z1": 0.0625, 
+    "x2": 0.9375, "y2": 0.625, "z2": 0.9375 
+  },
+  "selectionbox": { 
+    "x1": 0.0625, "y1": 0, "z1": 0.0625, 
+    "x2": 0.9375, "y2": 0.625, "z2": 0.9375 
   }
 }

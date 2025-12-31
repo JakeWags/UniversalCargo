@@ -19,7 +19,6 @@ namespace UniversalCargo
         // Handle breaking with NBT data preservation
         public override void OnBlockBroken(IWorldAccessor world, BlockPos pos, IPlayer byPlayer, float dropQuantityMultiplier = 1)
         {
-            // Only drop items on server side and not in creative mode
             if (world.Side == EnumAppSide.Server && (byPlayer == null || byPlayer.WorldData.CurrentGameMode != EnumGameMode.Creative))
             {
                 BlockEntitySealedCrate? be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntitySealedCrate;
@@ -27,22 +26,23 @@ namespace UniversalCargo
 
                 if (be != null)
                 {
-                    // Clone the data to ensure it persists in the item
                     if (be.SavedInventoryData != null)
                     {
                         drop.Attributes["savedInventory"] = be.SavedInventoryData.Clone();
                     }
-
                     if (be.OriginalBlockCode != null)
                     {
                         drop.Attributes.SetString("originalBlockCode", be.OriginalBlockCode);
+                    }
+                    if (be.CrateType != null)
+                    {
+                        drop.Attributes.SetString("crateType", be.CrateType);
                     }
                 }
 
                 world.SpawnItemEntity(drop, pos.ToVec3d().Add(0.5, 0.5, 0.5));
             }
 
-            // Call base to handle block removal, sounds, etc. - but AFTER we've spawned our item
             world.BlockAccessor.SetBlock(0, pos);
             world.BlockAccessor.TriggerNeighbourBlockUpdate(pos);
         }
@@ -61,6 +61,7 @@ namespace UniversalCargo
                 }
 
                 be.OriginalBlockCode = byItemStack.Attributes.GetString("originalBlockCode");
+                be.CrateType = byItemStack.Attributes.GetString("crateType");
                 be.MarkDirty(true);
             }
         }
@@ -85,30 +86,70 @@ namespace UniversalCargo
 
             if (be == null || be.SavedInventoryData == null)
             {
+                world.Logger.Warning("[UniversalCargo] Unsealing failed: No block entity or saved data");
                 return;
             }
 
-            string originalCode = be.OriginalBlockCode ?? "game:crate-oak-north";
+            string crateType = be.CrateType ?? "aged";
+            TreeAttribute savedData = be.SavedInventoryData.Clone() as TreeAttribute;
 
-            // Get the saved inventory data
-            TreeAttribute savedInventory = be.SavedInventoryData;
+            world.Logger.Event($"[UniversalCargo] Unsealing: Type = {crateType}");
 
-            Block? originalBlock = world.GetBlock(new AssetLocation(originalCode));
-            if (originalBlock == null) return;
-
-            // Swap the block - this creates a fresh, new block entity with correct position
-            world.BlockAccessor.SetBlock(originalBlock.BlockId, pos);
-
-            // IMMEDIATELY restore ONLY the inventory to the fresh block entity
-            BlockEntity? restoredBe = world.BlockAccessor.GetBlockEntity(pos);
-            if (restoredBe != null && restoredBe is IBlockEntityContainer container)
+            // Get the base crate block
+            Block crateBlock = world.GetBlock(new AssetLocation("game:crate"));
+            if (crateBlock == null)
             {
-                if (container.Inventory is InventoryBase invBase)
-                {
-                    invBase.FromTreeAttributes(savedInventory);
-                    restoredBe.MarkDirty(true);
-                }
+                world.Logger.Error("[UniversalCargo] Could not find crate block!");
+                return;
             }
+
+            world.Logger.Event("[UniversalCargo] About to place crate block...");
+
+            // Place the crate block
+            world.BlockAccessor.SetBlock(crateBlock.BlockId, pos);
+
+            world.Logger.Event("[UniversalCargo] Crate block placed, scheduling restoration...");
+
+
+            world.Logger.Event("[UniversalCargo] getting block entity...");
+
+            BlockEntityCrate? crateEntity = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityCrate;
+            if (crateEntity == null)
+            {
+                world.Logger.Error("[UniversalCargo] Failed to get crate block entity!");
+                return;
+            }
+
+            world.Logger.Event("[UniversalCargo] Got crate entity, restoring manually...");
+
+            try
+            {
+                // Manually set the type field directly
+                crateEntity.type = crateType;
+                world.Logger.Event($"[UniversalCargo] Set type to: {crateType}");
+
+                // Restore inventory manually
+                if (savedData.HasAttribute("inventory") && crateEntity.Inventory is InventoryBase invBase)
+                {
+                    TreeAttribute? inventoryData = savedData["inventory"] as TreeAttribute;
+                    if (inventoryData != null)
+                    {
+                        invBase.FromTreeAttributes(inventoryData);
+                        world.Logger.Event("[UniversalCargo] Restored inventory");
+                    }
+                }
+
+                // Mark dirty to trigger visual update
+                crateEntity.MarkDirty(true);
+
+                world.Logger.Event($"[UniversalCargo] Successfully restored as {crateType} crate!");
+            }
+            catch (System.Exception ex)
+            {
+                world.Logger.Error($"[UniversalCargo] Exception during restore: {ex.Message}");
+                world.Logger.Error($"[UniversalCargo] Stack trace: {ex.StackTrace}");
+            }
+
 
             world.PlaySoundAt(new AssetLocation("game:sounds/block/planks"), pos.X, pos.Y, pos.Z, null);
         }
