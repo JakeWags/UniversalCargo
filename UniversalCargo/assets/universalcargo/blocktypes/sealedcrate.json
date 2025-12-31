@@ -1,0 +1,23 @@
+{
+  "code": "sealedcrate",
+  "class": "BlockSealedCrate",
+  "entityClass": "BlockEntitySealedCrate",
+  "attributes": {
+    "handbook": { "groupBy": ["sealedcrate"] }
+  },
+  "blockmaterial": "Wood",
+  "resistance": 1.5,
+  "requiredMiningTier": 0,
+  "shape": { "base": "game:block/crate/normal-lid" },
+  "textures": {
+    "all": { "base": "game:block/crate/pine-north" } 
+  },
+  "maxstacksize": 1,
+  "creativeinventory": { "general": ["*"], "blocks": ["*"] },
+  "sounds": {
+    "place": "game:block/planks",
+    "break": "game:block/planks",
+    "hit": "game:block/planks",
+    "walk": "game:walk/wood"
+  }
+}

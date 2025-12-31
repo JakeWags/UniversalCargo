@@ -1,0 +1,11 @@
+{
+  "ingredientPattern": "L, B, T",
+  "ingredients": {
+    "L": { "type": "item", "code": "game:lumber-*" },
+    "B": { "type": "item", "code": "game:beeswax" },
+    "T": { "type": "item", "code": "game:resin" } 
+  },
+  "width": 1,
+  "height": 3,
+  "output": { "type": "item", "code": "packing_supplies", "quantity": 1 }
+}

@@ -1,0 +1,14 @@
+{
+    "$schema": "https://moddbcdn.vintagestory.at/schema/modinfo.latest.json",
+    "type": "Code",
+    "modid": "universalcargo",
+    "name": "UniversalCargo",
+    "authors": [
+        "GrompGilberton"
+    ],
+    "description": "Package storage blocks into sealed shippable items which can be carried in the inventory or placed in other storage interfaces.",
+    "version": "1.0.0",
+    "dependencies": {
+        "game": "1.21.5"
+    }
+}

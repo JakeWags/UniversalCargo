@@ -1,0 +1,9 @@
+{
+  "item-packingsupplies": "Packing Supplies",
+  "block-sealedcrate-*": "Sealed Container",
+  "blockdesc-sealedcrate-*": "A sealed container that can be transported. Use an axe to open it.",
+  "itemdesc-packingsupplies": "Sneak + Right-click on storage containers to seal them for transport. Contents will be preserved.",
+  "universalcargo:heldhelp-seal": "Seal container",
+  "universalcargo:blockhelp-unseal": "Unseal container",
+  "universalcargo:blockhelp-unseal-axe": "Unseal with axe"
+}

@@ -1,0 +1,13 @@
+{
+  "code": "packingsupplies",
+  "class": "ItemPackingSupplies",
+  "shape": { "base": "game:item/tool/hammer" },
+  "texture": { "base": "game:item/tool/hammer" },
+  "maxstacksize": 16,
+  "attributes": {
+    "handbook": {
+      "groupBy": ["packingsupplies-*"]
+    }
+  },
+  "creativeinventory": { "general": ["*"], "items": ["*"] }
+}
