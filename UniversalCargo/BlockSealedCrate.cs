@@ -10,7 +10,6 @@ namespace UniversalCargo
 {
     public class BlockSealedCrate : Block
     {
-        // ISSUE 1 FIX: Override GetDrops to prevent double drops
         public override ItemStack[] GetDrops(IWorldAccessor world, BlockPos pos, IPlayer byPlayer, float dropQuantityMultiplier = 1)
         {
             // Return empty array - we handle dropping in OnBlockBroken
@@ -29,9 +28,9 @@ namespace UniversalCargo
                 if (be != null)
                 {
                     // Clone the data to ensure it persists in the item
-                    if (be.SavedBlockEntityData != null)
+                    if (be.SavedInventoryData != null)
                     {
-                        drop.Attributes["savedData"] = be.SavedBlockEntityData.Clone();
+                        drop.Attributes["savedInventory"] = be.SavedInventoryData.Clone();
                     }
 
                     if (be.OriginalBlockCode != null)
@@ -56,9 +55,9 @@ namespace UniversalCargo
             BlockEntitySealedCrate? be = world.BlockAccessor.GetBlockEntity(blockPos) as BlockEntitySealedCrate;
             if (be != null && byItemStack?.Attributes != null)
             {
-                if (byItemStack.Attributes.HasAttribute("savedData"))
+                if (byItemStack.Attributes.HasAttribute("savedInventory"))
                 {
-                    be.SavedBlockEntityData = (byItemStack.Attributes["savedData"] as TreeAttribute)?.Clone() as TreeAttribute;
+                    be.SavedInventoryData = (byItemStack.Attributes["savedInventory"] as TreeAttribute)?.Clone() as TreeAttribute;
                 }
 
                 be.OriginalBlockCode = byItemStack.Attributes.GetString("originalBlockCode");
@@ -84,31 +83,31 @@ namespace UniversalCargo
         {
             BlockEntitySealedCrate? be = world.BlockAccessor.GetBlockEntity(pos) as BlockEntitySealedCrate;
 
-            if (be == null || be.SavedBlockEntityData == null)
+            if (be == null || be.SavedInventoryData == null)
             {
                 return;
             }
 
             string originalCode = be.OriginalBlockCode ?? "game:crate-oak-north";
 
-            // ISSUE 2 & 3 FIX: Clone data and update position BEFORE block swap
-            TreeAttribute savedData = be.SavedBlockEntityData.Clone() as TreeAttribute;
-            savedData.SetInt("x", pos.X);
-            savedData.SetInt("y", pos.Y);
-            savedData.SetInt("z", pos.Z);
+            // Get the saved inventory data
+            TreeAttribute savedInventory = be.SavedInventoryData;
 
             Block? originalBlock = world.GetBlock(new AssetLocation(originalCode));
             if (originalBlock == null) return;
 
-            // Swap the block
+            // Swap the block - this creates a fresh, new block entity with correct position
             world.BlockAccessor.SetBlock(originalBlock.BlockId, pos);
 
-            // IMMEDIATELY restore data (no delay needed)
+            // IMMEDIATELY restore ONLY the inventory to the fresh block entity
             BlockEntity? restoredBe = world.BlockAccessor.GetBlockEntity(pos);
-            if (restoredBe != null && savedData != null)
+            if (restoredBe != null && restoredBe is IBlockEntityContainer container)
             {
-                restoredBe.FromTreeAttributes(savedData, world);
-                restoredBe.MarkDirty(true);
+                if (container.Inventory is InventoryBase invBase)
+                {
+                    invBase.FromTreeAttributes(savedInventory);
+                    restoredBe.MarkDirty(true);
+                }
             }
 
             world.PlaySoundAt(new AssetLocation("game:sounds/block/planks"), pos.X, pos.Y, pos.Z, null);
@@ -132,7 +131,7 @@ namespace UniversalCargo
         public override void GetHeldItemInfo(ItemSlot inSlot, StringBuilder dsc, IWorldAccessor world, bool withDebugInfo)
         {
             base.GetHeldItemInfo(inSlot, dsc, world, withDebugInfo);
-            if (inSlot.Itemstack?.Attributes != null && inSlot.Itemstack.Attributes.HasAttribute("savedData"))
+            if (inSlot.Itemstack?.Attributes != null && inSlot.Itemstack.Attributes.HasAttribute("savedInventory"))
             {
                 string? originalCode = inSlot.Itemstack.Attributes.GetString("originalBlockCode");
                 if (!string.IsNullOrEmpty(originalCode))

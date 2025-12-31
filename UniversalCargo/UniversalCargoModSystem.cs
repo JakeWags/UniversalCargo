@@ -29,21 +29,13 @@ namespace UniversalCargo
         private readonly List<string> Whitelist = new List<string>
         {
             "*:crate-*",
-            "*:*crate*",
-            "*:basket-*",
-            "*:storagevessel-*",
-            "*:vessel-*",
-            "*:labeledchest-*",
-            "*:chest-*-labeled-*"
+            "*:*crate*"
         };
 
         private readonly List<string> Blacklist = new List<string>
         {
-            "*:*chest*",
-            "*:*trunk*",
-            "*:*treasure*",
+            // Empty for now
         };
-        // -----------------------------
 
         public override void Start(ICoreAPI api)
         {
@@ -59,8 +51,6 @@ namespace UniversalCargo
         {
             clientApi = api;
             clientChannel = api.Network.GetChannel("universalcargonet");
-
-            // Subscribe to mouse button event
             api.Input.InWorldAction += OnClientInput;
         }
 
@@ -68,46 +58,32 @@ namespace UniversalCargo
         {
             serverApi = api;
             serverChannel = api.Network.GetChannel("universalcargonet");
-
             serverChannel.SetMessageHandler<SealRequestPacket>(OnSealRequest);
         }
 
-        // --- CLIENT INPUT INTERCEPTOR ---
         private void OnClientInput(EnumEntityAction action, bool on, ref EnumHandling handled)
         {
-            // Only handle UseHeldItemOverBlock action on keydown
             if (action != EnumEntityAction.RightMouseDown || !on) return;
-
-            // Check for shift key
             if (!clientApi.Input.KeyboardKeyState[(int)GlKeys.ShiftLeft] &&
                 !clientApi.Input.KeyboardKeyState[(int)GlKeys.ShiftRight]) return;
 
-            // Item Check
             IClientPlayer player = clientApi.World.Player;
             ItemSlot handSlot = player.InventoryManager.ActiveHotbarSlot;
             if (handSlot.Empty || handSlot.Itemstack.Collectible.Code.Path != "packingsupplies") return;
 
-            // Target Check
             BlockSelection blockSel = player.CurrentBlockSelection;
             if (blockSel == null) return;
 
             Block block = clientApi.World.BlockAccessor.GetBlock(blockSel.Position);
-            string blockCode = block.Code.ToString();
-
-            // Validate & Send
-            if (IsAllowed(blockCode))
+            if (IsAllowed(block.Code.ToString()))
             {
                 clientChannel.SendPacket(new SealRequestPacket { Pos = blockSel.Position });
-
-                // Prevent default handling
                 handled = EnumHandling.PreventDefault;
             }
         }
 
-        // --- SERVER LOGIC ---
         private void OnSealRequest(IServerPlayer player, SealRequestPacket packet)
         {
-            // Security Checks
             if (!player.Entity.Controls.Sneak) return;
 
             ItemSlot handSlot = player.InventoryManager.ActiveHotbarSlot;
@@ -138,11 +114,20 @@ namespace UniversalCargo
 
         private void SealContainer(IWorldAccessor world, BlockPos pos, BlockEntity oldBe, IServerPlayer player, ItemSlot packingSlot)
         {
-            TreeAttribute beData = new TreeAttribute();
-            oldBe.ToTreeAttributes(beData);
+            //  Extract ONLY the inventory data
+            TreeAttribute inventoryData = new TreeAttribute();
+
+            if (oldBe is IBlockEntityContainer container && container.Inventory != null)
+            {
+                if (container.Inventory is InventoryBase invBase)
+                {
+                    invBase.ToTreeAttributes(inventoryData);
+                }
+            }
 
             string originalBlockCode = world.BlockAccessor.GetBlock(pos).Code.ToString();
 
+            // Create the Sealed Crate
             Block sealedBlock = world.GetBlock(new AssetLocation("universalcargo:sealedcrate"));
             if (sealedBlock == null) return;
 
@@ -151,7 +136,8 @@ namespace UniversalCargo
             BlockEntitySealedCrate newBe = world.BlockAccessor.GetBlockEntity(pos) as BlockEntitySealedCrate;
             if (newBe != null)
             {
-                newBe.SavedBlockEntityData = beData;
+                // Use 'SavedInventoryData' to match BlockEntity class
+                newBe.SavedInventoryData = inventoryData;
                 newBe.OriginalBlockCode = originalBlockCode;
                 newBe.MarkDirty(true);
             }
