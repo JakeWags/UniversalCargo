@@ -27,8 +27,7 @@ namespace UniversalCargo
 
         private readonly List<string> Whitelist = new List<string>
         {
-            "*:crate-*",
-            "*:*crate*",
+            "*:crate",           // Open crates only (game:crate)
             "*:basket-*",
             "*:storagevessel-*",
             "*:vessel-*",
@@ -38,6 +37,7 @@ namespace UniversalCargo
 
         private readonly List<string> Blacklist = new List<string>
         {
+            "*:block-*-crate",   // Exclude closed/decorative crates
             "*:*chest*",
             "*:*trunk*",
             "*:*treasure*",
@@ -125,18 +125,41 @@ namespace UniversalCargo
             TreeAttribute fullBeData = new TreeAttribute();
             oldBe.ToTreeAttributes(fullBeData);
 
-            string crateType = fullBeData.GetString("type", "aged");
+            string crateType = fullBeData.GetString("type", "wood-aged");
+            
+            // If type is empty or null, try to extract from block code
+            if (string.IsNullOrEmpty(crateType))
+            {
+                Block originalBlock = world.BlockAccessor.GetBlock(pos);
+                string blockCode = originalBlock.Code.Path;
+                
+                // Extract type from block code like "crate-oak" or "crate-pine-opened"
+                if (blockCode.StartsWith("crate-"))
+                {
+                    string[] parts = blockCode.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        crateType = $"wood-{parts[1]}";
+                    }
+                }
+            }
 
-            Block originalBlock = world.BlockAccessor.GetBlock(pos);
-            string originalBlockCode = originalBlock.Code.ToString();
+            string originalBlockCode = world.BlockAccessor.GetBlock(pos).Code.ToString();
 
-            world.Logger.Event($"[UniversalCargo] Sealing: Code='{originalBlockCode}', Type='{crateType}'");
-            (world.Api as ICoreServerAPI)?.SendMessage(player, 0, $"Sealed: {crateType} crate", EnumChatType.Notification);
+            // Extract wood type for sealed block variant (without "wood-" prefix)
+            string woodType = crateType.StartsWith("wood-") ? crateType.Substring(5) : crateType;
 
-            Block sealedBlock = world.GetBlock(new AssetLocation("universalcargo:sealedcrate"));
+            (world.Api as ICoreServerAPI)?.SendMessage(player, 0, $"Sealed: {woodType} crate", EnumChatType.Notification);
+
+            Block sealedBlock = world.GetBlock(new AssetLocation($"universalcargo:sealedcrate-{woodType}"));
             if (sealedBlock == null)
             {
-                world.Logger.Error("[UniversalCargo] Could not find sealedcrate block!");
+                world.Logger.Warning($"[UniversalCargo] Could not find sealedcrate-{crateType}, falling back to aged");
+                sealedBlock = world.GetBlock(new AssetLocation("universalcargo:sealedcrate-aged"));
+            }
+            if (sealedBlock == null)
+            {
+                world.Logger.Error("[UniversalCargo] Could not find any sealedcrate block!");
                 return;
             }
 
@@ -149,8 +172,6 @@ namespace UniversalCargo
                 newBe.OriginalBlockCode = originalBlockCode;
                 newBe.CrateType = crateType;
                 newBe.MarkDirty(true);
-
-                world.Logger.Event($"[UniversalCargo] Saved: Type={newBe.CrateType}");
             }
             else
             {
