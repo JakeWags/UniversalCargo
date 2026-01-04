@@ -1,10 +1,25 @@
 {
   "code": "sealedcrate",
+  "variantgroups": [
+    { "code": "type", "states": ["aged", "birch", "maple", "oak", "pine", "acacia", "kapok", "baldcypress", "larch", "redwood", "ebony", "purpleheart", "walnut"] }
+  ],
   "class": "BlockSealedCrate",
   "entityClass": "BlockEntitySealedCrate",
-  "shape": { "base": "game:block/wood/crate/normal-lid" },
+  "shape": { "base": "universalcargo:block/normal-sealed-crate" },
   "textures": { 
-    "all": { "base": "game:block/wood/crate/pine" } 
+    "sides": { "base": "game:block/wood/crate/{type}-sides" },
+    "frame-generic": { "base": "game:block/metal/riveted/blackbronze3" },
+    "label": { 
+      "base": "universalcargo:parchments/paperlabel",
+      "alternates": [
+        { "base": "universalcargo:parchments/paperlabel1" },
+        { "base": "universalcargo:parchments/paperlabel2" },
+        { "base": "universalcargo:parchments/paperlabel3" },
+        { "base": "universalcargo:parchments/paperlabel4" }
+      ]
+    },
+    "brass": { "base": "game:block/metal/plate/blackbronze" },
+    "null": { "base": "game:block/transparent" }
   },
   "maxstacksize": 1,
   "sidesolid": {
@@ -24,13 +39,5 @@
   "creativeinventory": { 
     "general": ["*"], 
     "decorative": ["*"] 
-  },
-  "collisionbox": { 
-    "x1": 0.0625, "y1": 0, "z1": 0.0625, 
-    "x2": 0.9375, "y2": 0.625, "z2": 0.9375 
-  },
-  "selectionbox": { 
-    "x1": 0.0625, "y1": 0, "z1": 0.0625, 
-    "x2": 0.9375, "y2": 0.625, "z2": 0.9375 
   }
 }

@@ -90,10 +90,8 @@ namespace UniversalCargo
                 return;
             }
 
-            string crateType = be.CrateType ?? "aged";
+            string crateType = be.CrateType ?? "wood-aged";
             TreeAttribute savedData = be.SavedInventoryData.Clone() as TreeAttribute;
-
-            world.Logger.Event($"[UniversalCargo] Unsealing: Type = {crateType}");
 
             // Get the base crate block
             Block crateBlock = world.GetBlock(new AssetLocation("game:crate"));
@@ -103,15 +101,8 @@ namespace UniversalCargo
                 return;
             }
 
-            world.Logger.Event("[UniversalCargo] About to place crate block...");
-
             // Place the crate block
             world.BlockAccessor.SetBlock(crateBlock.BlockId, pos);
-
-            world.Logger.Event("[UniversalCargo] Crate block placed, scheduling restoration...");
-
-
-            world.Logger.Event("[UniversalCargo] getting block entity...");
 
             BlockEntityCrate? crateEntity = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityCrate;
             if (crateEntity == null)
@@ -120,33 +111,27 @@ namespace UniversalCargo
                 return;
             }
 
-            world.Logger.Event("[UniversalCargo] Got crate entity, restoring manually...");
-
             try
             {
-                // Manually set the type field directly
+                // Restore the type field
                 crateEntity.type = crateType;
-                world.Logger.Event($"[UniversalCargo] Set type to: {crateType}");
 
-                // Restore inventory manually
+                // Restore inventory
                 if (savedData.HasAttribute("inventory") && crateEntity.Inventory is InventoryBase invBase)
                 {
                     TreeAttribute? inventoryData = savedData["inventory"] as TreeAttribute;
                     if (inventoryData != null)
                     {
                         invBase.FromTreeAttributes(inventoryData);
-                        world.Logger.Event("[UniversalCargo] Restored inventory");
                     }
                 }
 
                 // Mark dirty to trigger visual update
                 crateEntity.MarkDirty(true);
-
-                world.Logger.Event($"[UniversalCargo] Successfully restored as {crateType} crate!");
             }
             catch (System.Exception ex)
             {
-                world.Logger.Error($"[UniversalCargo] Exception during restore: {ex.Message}");
+                world.Logger.Error($"[UniversalCargo] Exception during unsealing: {ex.Message}");
                 world.Logger.Error($"[UniversalCargo] Stack trace: {ex.StackTrace}");
             }
 
